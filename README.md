@@ -1,2 +1,288 @@
 # bike-usage
 A case study about bike usage from a bike sharing company. Through analysing the data from 2019, I offer insights into how annual subscribers and regular customers differ in their usage of the bikes. With these insights, a suitable marketing strategy can be chosen.
+
+library(readr)
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+library(tidyr)
+
+# Replace these with your actual file paths
+file_q1 <- "~/Documents/case-study-1/Divvy_Trips_2019_Q1.csv"
+file_q2 <- "~/Documents/case-study-1/Divvy_Trips_2019_Q2.csv"
+file_q3 <- "~/Documents/case-study-1/Divvy_Trips_2019_Q3.csv"
+file_q4 <- "~/Documents/case-study-1/Divvy_Trips_2019_Q4.csv"
+
+# Reading each dataset
+data_q1 <- read_csv(file_q1)
+data_q2 <- read_csv(file_q2)
+data_q3 <- read_csv(file_q3)
+data_q4 <- read_csv(file_q4)
+
+# Aligning column names for Q2 to match Q1
+colnames(data_q2) <- colnames(data_q1)
+
+# Merging the datasets
+merged_data <- bind_rows(data_q1, data_q2, data_q3, data_q4)
+
+# Initial inspection of the merged dataset
+head(merged_data)
+summary(merged_data)
+dim(merged_data)
+
+# Convert date-time columns
+merged_data <- merged_data %>%
+  mutate(start_time = ymd_hms(start_time),
+         end_time = ymd_hms(end_time))
+
+# Convert trip duration to numeric (if it's not already)
+merged_data <- merged_data %>%
+  mutate(tripduration = as.numeric(tripduration))
+
+# Handling missing data (example)
+merged_data <- merged_data %>%
+  filter(!is.na(gender)) # This is just an example, adjust based on your analysis needs
+
+# Check for consistency in categorical data
+merged_data <- merged_data %>%
+  mutate(usertype = as.factor(usertype))
+
+# Initial data exploration
+summary(merged_data)
+
+# Clean up of tripduration --> We cap the value at 24 hours
+max_duration <- 24 * 60 * 60
+merged_data <- merged_data %>%
+  mutate(tripduration = ifelse(tripduration > max_duration, max_duration, tripduration))
+
+# Ensuring consistency in categorical data
+merged_data <- merged_data %>%
+  mutate(
+    usertype = as.factor(usertype),
+    gender = as.factor(gender)
+  )
+
+# Clean up of birthyear --> We NA the birthyears below 1900
+merged_data <- merged_data %>%
+  mutate(birthyear = ifelse(birthyear < 1900, NA, birthyear))
+
+# Adding ride length in HH:MM:SS format and day of the week column
+merged_data <- merged_data %>%
+  mutate(
+    ride_length = interval(start_time, end_time),
+    day_of_week = wday(start_time, label = TRUE, week_start = 1) # Setting week_start = 1 makes 1 = Sunday
+  )
+
+# Convert 'ride_length' from an interval to a period, then to HH:MM:SS format
+merged_data$ride_length <- as.period(merged_data$ride_length)
+
+# Remove instances with negative ride times
+merged_data <- merged_data %>%
+  filter(ride_length >= as.period(seconds(0)))
+
+summary_statistics <- merged_data %>%
+  group_by(usertype) %>%
+  summarise(
+    total_rides = n(),
+    average_duration = mean(tripduration),
+    median_duration = median(tripduration)
+  )
+
+
+# 1. Day of the Week Analysis (Relative Comparison)
+  # Calculate the total number of rides for each user type
+  weekly_totals <- merged_data %>%
+    group_by(usertype) %>%
+    summarise(total_rides = n()) %>%
+    ungroup()
+  
+  # Join the weekly totals with the original data to calculate proportions
+  merged_data_dayanalysis <- merged_data %>%
+    left_join(weekly_totals, by = "usertype") %>%
+    mutate(weekday = wday(start_time, label = TRUE, week_start = 1)) %>%
+    group_by(usertype, weekday) %>%
+    summarise(
+      daily_rides = n(),
+      proportion = daily_rides / total_rides
+    ) %>%
+    ungroup()
+  
+  # Plotting the relative difference in day of the week usage
+  ggplot(merged_data_dayanalysis, aes(x = weekday, y = proportion, fill = usertype)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    labs(title = "Relative Ride Proportion by Day of the Week",
+         x = "Day of the Week",
+         y = "Proportion of Weekly Rides",
+         fill = "User Type")
+
+# 2. Time of Day Analysis (Relative Comparison)
+  # Extract the hour from the start_time
+  merged_data <- merged_data %>%
+    mutate(hour_of_day = hour(start_time))
+  
+  # Calculate the total number of rides per hour for each user type
+  hourly_totals <- merged_data %>%
+    group_by(usertype) %>%
+    summarise(total_rides = n()) %>%
+    ungroup()
+  
+  # Join the hourly totals with the original data to calculate proportions
+  merged_data_houranalysis <- merged_data %>%
+    left_join(hourly_totals, by = "usertype") %>%
+    group_by(usertype, hour_of_day) %>%
+    summarise(
+      hourly_rides = n(),
+      proportion = hourly_rides / total_rides
+    ) %>%
+    ungroup()
+  
+  # Plotting the relative difference in time of the day usage
+  ggplot(merged_data_houranalysis, aes(x = hour_of_day, y = proportion, fill = usertype)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    labs(title = "Relative Ride Proportion by Hour of the Day",
+         x = "Hour of the Day",
+         y = "Proportion of Total Rides",
+         fill = "User Type")
+
+# 3. Difference in Duration Analysis
+  # Calculate average and median ride durations for each user type
+  duration_by_usertype <- merged_data %>%
+    group_by(usertype) %>%
+    summarise(
+      average_duration = mean(tripduration, na.rm = TRUE) / 60, # Convert to minutes
+      median_duration = median(tripduration, na.rm = TRUE) / 60 # Convert to minutes
+    ) %>%
+    ungroup()
+  
+  # Create a combined data frame for plotting
+  duration_long <- gather(duration_by_usertype, key = "statistic", value = "duration", -usertype)
+  
+  # Plotting the difference in ride duration
+  ggplot(duration_long, aes(x = usertype, y = duration, fill = statistic)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    labs(title = "Average and Median Ride Duration by User Type",
+         x = "User Type",
+         y = "Duration (minutes)",
+         fill = "Statistic")
+  
+# 4. Difference in Start and End Stations Analysis
+  
+  # Calculate the most popular start stations for each user type
+  popular_start_stations <- merged_data %>%
+    group_by(usertype, from_station_name) %>%
+    summarise(start_count = n()) %>%
+    ungroup() %>%
+    arrange(desc(start_count))
+  
+  # Calculate the most popular end stations for each user type
+  popular_end_stations <- merged_data %>%
+    group_by(usertype, to_station_name) %>%
+    summarise(end_count = n()) %>%
+    ungroup() %>%
+    arrange(desc(end_count))
+  
+  # Assuming you want to look at the top 10 stations, let's filter those
+  top_start_stations <- popular_start_stations %>%
+    group_by(usertype) %>%
+    top_n(10, start_count) %>%
+    ungroup()
+  
+  top_end_stations <- popular_end_stations %>%
+    group_by(usertype) %>%
+    top_n(10, end_count) %>%
+    ungroup()
+  
+  # If you want to visualize this data, you might create a bar plot for the most popular stations
+  # Here's an example for the start stations:
+  
+  ggplot(top_start_stations, aes(x = reorder(from_station_name, start_count), y = start_count, fill = usertype)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    labs(title = "Top 10 Start Stations by User Type",
+         x = "Station Name",
+         y = "Number of Starts",
+         fill = "User Type") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))  # Rotate x labels for readability
+  
+  ggplot(top_end_stations, aes(x = reorder(to_station_name, end_count), y = end_count, fill = usertype)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    labs(title = "Top 10 End Stations by User Type",
+         x = "Station Name",
+         y = "Number of Ends",
+         fill = "User Type") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))  # Rotate x labels for readability
+  
+  # Assuming the merged_data already contains 'birthyear' and 'gender' columns
+  
+# 5. Relative Gender Analysis
+  gender_distribution <- merged_data %>%
+    group_by(usertype, gender) %>%
+    summarise(gender_count = n()) %>%
+    mutate(gender_proportion = gender_count / sum(gender_count)) %>%
+    ungroup()
+  
+  # Plotting relative gender distribution
+  ggplot(gender_distribution, aes(x = gender, y = gender_proportion, fill = usertype)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    labs(title = "Relative Gender Distribution by User Type",
+         x = "Gender",
+         y = "Proportion of Rides",
+         fill = "User Type")
+
+# 6. Relative Age Analysis
+  # Assuming the data is from 2019, replace with the appropriate year if not
+  current_year <- 2019
+  merged_data <- merged_data %>%
+    mutate(age = current_year - birthyear) %>%
+    filter(age >= 18, age <= 80)  # Assuming adult riders and removing unrealistic ages
+  
+  age_distribution <- merged_data %>%
+    group_by(usertype, age) %>%
+    summarise(age_count = n()) %>%
+    mutate(age_proportion = age_count / sum(age_count)) %>%
+    ungroup()
+  
+  # Plotting relative age distribution
+  ggplot(age_distribution, aes(x = age, y = age_proportion, fill = usertype)) +
+    geom_bar(stat = "identity", position = "identity", alpha = 0.5) +
+    labs(title = "Relative Age Distribution by User Type",
+         x = "Age",
+         y = "Proportion of Rides",
+         fill = "User Type")
+
+  # 7. Seasonal Usage Patterns Analysis
+  # Extract the month from the start_time
+  merged_data <- merged_data %>%
+    mutate(month = month(start_time))
+  
+  seasonal_usage <- merged_data %>%
+    group_by(usertype, month) %>%
+    summarise(monthly_rides = n()) %>%
+    mutate(monthly_proportion = monthly_rides / sum(monthly_rides)) %>%
+    ungroup()
+  
+  # Plotting seasonal usage patterns
+  ggplot(seasonal_usage, aes(x = month, y = monthly_proportion, fill = usertype)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    scale_x_continuous(breaks = 1:12, labels = month.abb) +
+    labs(title = "Seasonal Ride Proportion by User Type",
+         x = "Month",
+         y = "Proportion of Total Rides",
+         fill = "User Type")
+  
+# 13. Ride Time Predictability Analysis
+  predictability_by_usertype <- merged_data %>%
+    group_by(usertype) %>%
+    summarise(
+      sd_duration = sd(tripduration, na.rm = TRUE),
+      var_duration = var(tripduration, na.rm = TRUE)
+    ) %>%
+    ungroup()
+  
+  # Plotting ride time predictability
+  ggplot(predictability_by_usertype, aes(x = usertype, y = sd_duration, fill = usertype)) +
+    geom_col() +
+    labs(title = "Ride Time Predictability by User Type",
+         x = "User Type",
+         y = "Standard Deviation of Ride Duration (seconds)",
+         fill = "User Type")
+  
