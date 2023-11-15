@@ -9,7 +9,7 @@ Their objective is to develop marketing strategies to convert casual riders into
 
 **I was tasked with using data analysis to answer the following question: How do annual members and casual riders use Cyclistic bikes differently?**
 
-This repository contains the following deliverables: 
+This repository contains a report with the following deliverables: 
 1. A clear statement of the business task
 2. A description of all data sources used
 3. Documentation of any cleaning or manipulation of data
