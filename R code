@@ -37,9 +37,9 @@ merged_data <- merged_data %>%
 merged_data <- merged_data %>%
   mutate(tripduration = as.numeric(tripduration))
 
-# Handling missing data (example)
+# Handling missing data 
 merged_data <- merged_data %>%
-  filter(!is.na(gender)) # This is just an example, adjust based on your analysis needs
+  filter(!is.na(gender)) 
 
 # Check for consistency in categorical data
 merged_data <- merged_data %>%
@@ -190,8 +190,8 @@ summary_statistics <- merged_data %>%
     top_n(10, end_count) %>%
     ungroup()
   
-  # If you want to visualize this data, you might create a bar plot for the most popular stations
-  # Here's an example for the start stations:
+  
+
   
   ggplot(top_start_stations, aes(x = reorder(from_station_name, start_count), y = start_count, fill = usertype)) +
     geom_bar(stat = "identity", position = "dodge") +
@@ -209,7 +209,7 @@ summary_statistics <- merged_data %>%
          fill = "User Type") +
     theme(axis.text.x = element_text(angle = 90, hjust = 1))  # Rotate x labels for readability
   
-  # Assuming the merged_data already contains 'birthyear' and 'gender' columns
+  
   
 # 5. Relative Gender Analysis
   gender_distribution <- merged_data %>%
@@ -267,7 +267,7 @@ summary_statistics <- merged_data %>%
          y = "Proportion of Total Rides",
          fill = "User Type")
   
-# 13. Ride Time Predictability Analysis
+# 8. Ride Time Predictability Analysis
   predictability_by_usertype <- merged_data %>%
     group_by(usertype) %>%
     summarise(
