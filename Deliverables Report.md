@@ -15,17 +15,17 @@ Key stakeholers for this task are the Cyclistic analytics team, marketing team, 
 The data analyzed is company data about the usage in the four quarters of 2019. The data consits of trip details on every single bike ride in 2019. The base file has the following columns, though naming is slightly different in the file of Q3:
 
 trip_id	--> The ID number of the trip <br>
-start_time	--> The start time of the trip
-end_time	--> The end time of the trip
-bikeid --> The ID number of the bike used	
-tripduration --> How long the trip was in seconds	
-from_station_id	 --> Starting station ID number
-from_station_name	--> Starting station name
-to_station_id	--> End station ID number
-to_station_name	-> End station name
-usertype --> Type of user, either a customer or subscriber	
-gender --> User gender, either male or female	
-birthyear --> User birthyear
+start_time	--> The start time of the trip<br>
+end_time	--> The end time of the trip<br>
+bikeid --> The ID number of the bike used	<br>
+tripduration --> How long the trip was in seconds<br>	
+from_station_id	 --> Starting station ID number<br>
+from_station_name	--> Starting station name<br>
+to_station_id	--> End station ID number<br>
+to_station_name	-> End station name<br>
+usertype --> Type of user, either a customer or subscriber<br>	
+gender --> User gender, either male or female	<br>
+birthyear --> User birthyear<br>
 
 As this data is from the company itself, it is determined to be reliable. It seems to be complete, consistent and mostly acccurate. 
 There is no private information about the user, so there are no privacy conserns. The data was downloaded and stored on a secured laptop. 
