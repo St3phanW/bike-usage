@@ -14,7 +14,7 @@ Key stakeholers for this task are the Cyclistic analytics team, marketing team, 
 ## 2. A description of all data sources used
 The data analyzed is company data about the usage in the four quarters of 2019. The data consits of trip details on every single bike ride in 2019. The base file has the following columns, though naming is slightly different in the file of Q3:
 
-trip_id	--> The ID number of the trip
+trip_id	--> The ID number of the trip <br>
 start_time	--> The start time of the trip
 end_time	--> The end time of the trip
 bikeid --> The ID number of the bike used	
